@@ -28,9 +28,9 @@ for f in temp_files:
 	else:   
 		imgs.append(tf.read_file(f))
 for f in temp_files:
-	if f.endswith('.jpg') and f[-12:].find('image') != -1:
+	if f.endswith('.jpg') and f[-20:].find('image') != -1:
 		groundtruth.append(0)
-	elif f.endswith('.jpg') and f[-12].find('image') == -1:
+	elif f.endswith('.jpg') and f[-20:].find('image') == -1:
 		groundtruth.append(1)
 	else:
 		continue
@@ -40,13 +40,18 @@ model = AlexNet(x, keep_prob, 2 , [])
 # Link variable to model output
 score = model.fc8
 softmax = tf.nn.softmax(score)
-
+label = tf.placeholder(tf.float32,None,name='label')
+prediction_list = tf.placeholder(tf.float32,None,name='prediction_list')
+accuracy = tf.metrics.accuracy(label,prediction_list)
+auc = tf.metrics.auc(label,prediction_list)
+#confusion = tf.confusion_matrix(label,prediction_list) 
 # create saver instance
 saver = tf.train.Saver()
-
+predictions = []
 with tf.Session() as sess:    
     sess.run(tf.global_variables_initializer())
-    saver.restore(sess, 'model_epoch10.ckpt')
+    sess.run(tf.local_variables_initializer())
+    saver.restore(sess, 'model_epoch50.ckpt')
 
     for i,image in enumerate(imgs):
     	img_decoded = tf.image.decode_jpeg(image, channels=3)
@@ -57,5 +62,10 @@ with tf.Session() as sess:
         img = tf.reshape(img_bgr,(1,227,227,3))
         pred = sess.run(softmax, feed_dict={x: sess.run(img)})
         predicted_label = pred.argmax(axis=1)
-        output_file.write(str(predicted_label[0]) + "," + str(groundtruth[i]) + ", " +  str(int(groundtruth[i] == predicted_label[0])) +  '\n')
+	predictions.append(predicted_label[0])
+	output_file.write(str(predicted_label[0]) + "," + str(groundtruth[i]) + ", "+ str(int(predicted_label[0] == groundtruth[i]))  +  '\n')
+ #   output_file.write(str(sess.run(confusion)))
+    accuracy = sess.run(accuracy,feed_dict={label:groundtruth,prediction_list:predictions})
+    auc = sess.run(auc,feed_dict={label:groundtruth,prediction_list:predictions})
+    output_file.write("accuracy was " + str(accuracy) + ", " + "AUC was " + str(auc))
 output_file.close()        
