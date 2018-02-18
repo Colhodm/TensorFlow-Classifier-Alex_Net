@@ -15,6 +15,7 @@ batch_size = 1
 x = tf.placeholder(tf.float32, [batch_size, 227, 227, 3])
 keep_prob = tf.constant(1., dtype=tf.float32)
 imagenet_mean = tf.constant([123.68, 116.779, 103.939], dtype=tf.float32)
+trainingset_mean = tf.constant([62.42,62.42,62.42], dtype=tf.float32)
 current_dir = os.getcwd()
 image_dir = os.path.join(current_dir, 'test')
 img_files = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.endswith('.jpeg')]
@@ -51,12 +52,13 @@ predictions = []
 with tf.Session() as sess:    
     sess.run(tf.global_variables_initializer())
     sess.run(tf.local_variables_initializer())
-    saver.restore(sess, 'model_epoch50.ckpt')
+    saver.restore(sess, 'model_epoch46.ckpt')
 
     for i,image in enumerate(imgs):
     	img_decoded = tf.image.decode_jpeg(image, channels=3)
 	img_resized = tf.image.resize_images(img_decoded, [227, 227])
         img_centered = tf.subtract(img_resized,imagenet_mean)
+        img_centered = tf.subtract(img_centered,trainingset_mean)
 	img_bgr = img_centered[:, :, ::-1]
         # Reshape as needed to feed into model
         img = tf.reshape(img_bgr,(1,227,227,3))
